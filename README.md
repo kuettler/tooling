@@ -18,11 +18,11 @@ tool that makes the whole github project worthwhile and its author proud.
 
 This is all there is at this point. There might be more to come.
 
-Utils
------
+Modules
+-------
 
 - `Tokenizer.d`: the tokenizer from facebook's `flint`
-- `Scanner.d`: the reader that find matching pairs of braces and statement separations
+- `Scanner.d`: the reader that finds matching pairs of braces and statement separations
 - `TreeRange.d`: a depth-first tree input range
 
 Some restrictions apply:
