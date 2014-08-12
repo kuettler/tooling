@@ -7,10 +7,12 @@ class Entity
   auto structRe = regex(r"^(namespace|class|struct|enum)( (?P<name>\w+))?");
 
   auto functionRe = regex(r"(template <[^>]+> )?" ~
-						  r"(?P<return>([a-zA-Z0-9_]+|( :: )|( & )|( ~ )|( < )|( , )|( > )|( \* ))+ ?)" ~
-						  r"(?P<name>([a-zA-Z0-9_]+|( :: ))+)" ~
+						  r"(?P<return>([a-zA-Z0-9_&<,>* ]+|(::))+ )?" ~
+						  r"(?P<name>(((~ )|(:: ))?[a-zA-Z0-9_]+|( :: ))+)" ~
 						  r"(o?perator *.[^(]*)?" ~
-						  r" \( (?P<args>[a-zA-Z0-9_ :&<,>*]*)\)");
+						  r" \( (?P<args>[a-zA-Z0-9_ :&<,>*]*)\)" ~
+						  r"(?P<suffix> [a-zA-Z]+)*"
+						  );
 
 public:
   this(string[] expr, Token[] tokens, Entity[] content)
@@ -36,6 +38,7 @@ public:
 
 		returnType_ = m["return"].strip;
 		arguments_ = m["args"].strip.splitter(" , ").array;
+		suffix_ = m["suffix"].strip.splitter(" ").array;
 	  }
 	}
 
@@ -47,7 +50,7 @@ public:
   {
 	if (type_ == "function")
 	{
-	  return name_ ~ "(" ~ arguments_.joiner(",").text ~ ")";
+	  return name_ ~ "(" ~ arguments_.joiner(",").text ~ ") " ~ suffix_.joiner(" ").text;
 	}
 	else
 	{
@@ -57,7 +60,14 @@ public:
 
   void print(string indent="")
   {
-	writeln(indent, "<", type_, "> ", name_);
+	if (type_ == "function")
+	{
+	  writeln(indent, "<", type_, "> `", returnType_, "` ", name_, "(", arguments_, ") ", suffix_);
+	}
+	else
+	{
+	  writeln(indent, "<", type_, "> ", name_);
+	}
 	foreach (c; content_)
 	{
 	  c.print(indent~"  ");
@@ -70,6 +80,7 @@ public:
   Entity[] content_;
   string returnType_;
   string[] arguments_;
+  string[] suffix_;
 }
 
 Entity[] readTokenStream(Token[] tokens, ref ulong start)
