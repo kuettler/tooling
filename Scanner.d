@@ -147,15 +147,24 @@ auto entityNames(Entity[] entries)
   return entries.map!(i => i.name_);
 }
 
-class SourceFile
+struct SourceFile
 {
   this(string path)
   {
 	auto content = std.file.readText(path);
 	tokenize(content, path, tokens_);
+	scanTokens();
+  }
 
+  this(Token[] tokens)
+  {
+	tokens_ = tokens;
+	scanTokens();
+  }
+
+  private void scanTokens()
+  {
 	auto namespaceTokens = find!(t => t.value == "namespace")(tokens_);
-
 	ulong start = 0;
 	content_ = readTokenStream(namespaceTokens, start);
   }

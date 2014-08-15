@@ -13,7 +13,7 @@ void main(string[] args)
   foreach (fi; 1 .. args.length)
   {
     auto filename = args[fi];
-	auto sourceFile = new SourceFile(filename);
+	auto sourceFile = SourceFile(filename);
 
 	auto newFile = filename ~ ".tmp";
     auto f = File(newFile, "w");

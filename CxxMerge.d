@@ -11,7 +11,7 @@ auto mergedRange(string[] filenames)
   {
 	this(string[] filenames)
 	{
-	  tokenRanges_ = filenames.map!(f => new SourceFile(f).tokenRange).array;
+	  tokenRanges_ = filenames.map!(f => SourceFile(f).tokenRange).array;
 	  rangeState_.length = tokenRanges_.length;
 	  pos_ = 0;
 	  prependNewline_ = false;

@@ -39,6 +39,7 @@ Modules
 - `Scanner.d`: the reader that finds matching pairs of braces and statement separations
 - `TreeRange.d`: a depth-first tree input range
 - `TokenRange.d`: the base range for many tools that combines the token range with the entity tree from the scanner
+- `SortRange.d`: the range of a file's tokens with all functions in a namespace sorted
 
 Some restrictions apply:
 
