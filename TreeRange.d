@@ -1,5 +1,8 @@
 import std.array, std.algorithm, std.range;
 
+// Walk a nested (tree) structure "depth-first". Return the path from root to
+// leaf in each step.
+
 auto treeRange(alias isBranch, alias children, T)(T[] root)
 {
   struct Walker
@@ -18,9 +21,8 @@ auto treeRange(alias isBranch, alias children, T)(T[] root)
 		auto f = nodes_.front;
 		if (isBranch(f))
 		{
-		  auto n = children(f);
 		  stack_ ~= nodes_;
-		  nodes_ = n;
+		  nodes_ = children(f);
 		}
 		else
 		{
@@ -39,4 +41,28 @@ auto treeRange(alias isBranch, alias children, T)(T[] root)
   }
 
   return Walker(root);
+}
+
+unittest
+{
+  import std.stdio, std.conv;
+  class Node
+  {
+	this(int payload, Node[] children) {
+	  this.payload = payload;
+	  this.children = children;
+	}
+	int payload;
+	Node[] children;
+  }
+  auto nodes = [new Node(1, [new Node(2, [new Node(3, [])]),
+							 new Node(4, [new Node(5, [new Node(6, [])])]),
+							 new Node(7, [])
+							 ])
+				];
+
+  auto r = treeRange!(t => !t.children.empty, t => t.children)(nodes);
+  foreach (e; r) {
+	writeln(e.map!(i => to!string(i.payload)).joiner("-"));
+  }
 }

@@ -1,6 +1,14 @@
+import std.algorithm;
+import std.conv;
+import std.exception;
+import std.file;
+import std.range;
+import std.regex;
+import std.stdio;
+import std.string;
+
 import Tokenizer;
 import TreeRange;
-import std.algorithm, std.conv, std.exception, std.file, std.range, std.stdio, std.regex, std.string;
 
 class Entity
 {
@@ -15,9 +23,10 @@ class Entity
 						  );
 
 public:
-  this(string[] expr, Token[] tokens, Entity[] content)
+
+  this(Token[] expr, Token[] tokens, Entity[] content)
   {
-	auto line = expr.joiner(" ").to!string;
+	auto line = expr.map!(value).joiner(" ").to!string;
 
 	type_ = "code";
 	name_ = "";
@@ -25,7 +34,7 @@ public:
 	auto m = line.matchFirst(structRe);
 	if (!m.empty)
 	{
-	  type_ = expr[0];
+	  type_ = expr[0].value;
 	  name_ = m["name"];
 	}
 	else
@@ -42,6 +51,7 @@ public:
 	  }
 	}
 
+	expr_ = expr;
 	tokens_ = tokens;
 	content_ = content;
   }
@@ -50,6 +60,7 @@ public:
   {
 	if (type_ == "function")
 	{
+	  //return expr_[0].value ~ expr_[1 .. $].map!(t => t.precedingWhitespace_ ~ t.value).joiner.to!string;
 	  return name_ ~ "(" ~ arguments_.joiner(",").text ~ ") " ~ suffix_.joiner(" ").text;
 	}
 	else
@@ -76,6 +87,7 @@ public:
 
   string type_;
   string name_;
+  Token[] expr_;
   Token[] tokens_;
   Entity[] content_;
   string returnType_;
@@ -97,7 +109,7 @@ Entity[] readTokenStream(Token[] tokens, ref ulong start)
 		{
 		  start += 1;
 		}
-		auto expr = tokens[start .. i].map!(value).array;
+		auto expr = tokens[start .. i];
 		auto e = new Entity(expr, tokens[start .. i+1], []);
 		if (e.type_ != "code")
 		{
@@ -113,7 +125,7 @@ Entity[] readTokenStream(Token[] tokens, ref ulong start)
 		start += 1;
 	  }
 
-	  auto expr = tokens[start .. i].map!(value).array;
+	  auto expr = tokens[start .. i];
 	  i += 1;
 	  auto content = readTokenStream(tokens, i);
 	  auto e = new Entity(expr,
@@ -147,26 +159,99 @@ auto entityNames(Entity[] entries)
   return entries.map!(i => i.name_);
 }
 
+auto scanTokens(Token[] tokens)
+{
+  // Start at the first namespace.
+  // FIXME: Right now we only scan the first namespace.
+  auto namespaceTokens = find!(t => t.value == "namespace")(tokens);
+  ulong start = 0;
+  return readTokenStream(namespaceTokens, start);
+}
+
+string detab(string input)
+{
+  string output;
+  size_t j;
+
+  int column;
+  for (size_t i = 0; i < input.length; i++)
+  {
+	char c = input[i];
+
+	switch (c)
+	{
+	  case '\t':
+		while ((column & 1) != 1)
+		{
+		  output ~= ' ';
+		  j++;
+		  column++;
+		}
+		c = ' ';
+		column++;
+		break;
+
+	  case '\r':
+	  case '\n':
+		while (j && output[j - 1] == ' ')
+		  j--;
+		output = output[0 .. j];
+		column = 0;
+		break;
+
+	  default:
+		column++;
+		break;
+	}
+	output ~= c;
+	j++;
+  }
+  while (j && output[j - 1] == ' ')
+	j--;
+  return output[0 .. j];
+}
+
+
+auto readTokens(string path)
+{
+  string content;
+  if (path == "-")
+  {
+	foreach (ulong i, string line; lines(stdin))
+	{
+	  content ~= detab(line);
+	}
+  }
+  else
+  {
+	content = detab(std.file.readText(path));
+  }
+  Token[] tokens;
+  tokenize(content, path, tokens);
+  return tokens;
+}
+
+void writeTokens(File f, Token[] tokens)
+{
+  foreach (ref t; tokens[0 .. $-1]) {
+	f.write(t.precedingWhitespace_, t.value);
+  }
+  f.write(tokens[$-1].precedingWhitespace_);
+}
+
+// FIXME: Remove
 struct SourceFile
 {
   this(string path)
   {
-	auto content = std.file.readText(path);
-	tokenize(content, path, tokens_);
-	scanTokens();
+	tokens_ = readTokens(path);
+	content_ = scanTokens(tokens_);
   }
 
   this(Token[] tokens)
   {
 	tokens_ = tokens;
-	scanTokens();
-  }
-
-  private void scanTokens()
-  {
-	auto namespaceTokens = find!(t => t.value == "namespace")(tokens_);
-	ulong start = 0;
-	content_ = readTokenStream(namespaceTokens, start);
+	content_ = scanTokens(tokens_);
   }
 
   Token[] tokens_;

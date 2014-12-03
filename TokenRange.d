@@ -4,83 +4,111 @@ import Scanner;
 import TreeRange;
 import Tokenizer;
 
-struct EntityToken
-{
-  this(Token token, Entity entity)
-  {
-	token_ = token;
-	entity_ = entity;
-  }
-
-  Token token_;
-  Entity entity_;
-}
+alias EntityToken = Tuple!(Token, "token_", Entity, "entity_");
 
 struct TokenRangeResult
 {
-  this(SourceFile sourceFile)
+  this(Entity[][] entries, Token[] tokens)
   {
-	entries_ = treeRange!(t => t.type_ == "namespace",
-						  t => t.content_)(sourceFile.content_)
-	  .array
-	  ;
+	entries_ = entries;
+	tokens_ = tokens;
 
-	tokens_ = sourceFile.tokens_;
+	if (isEntityStart())
+	  consumeEntity();
+  }
 
-	if (!entries_.empty &&
-		&entries_.front.back.tokens_[0] == &tokens_[0])
-	{
-	  entityStack_ = entries_.front;
-	  entries_.popFront;
-	}
+  private Entity currentEntity() { return entityStack_.back; }
+  private Entity nextEntity() { return entries_.front.back; }
+
+  private bool hasCurrentEntity() { return !entityStack_.empty; }
+  private bool hasNextEntity() { return !entries_.empty; }
+
+  private bool isEntityStart() {
+	return hasNextEntity &&
+	  &nextEntity.tokens_[0] == &tokens_[0];
+  }
+
+  private bool isEntityDone() {
+	return &currentEntity.tokens_[$-1] < &tokens_[0];
+  }
+
+  private bool isNestedEntity() {
+	return &nextEntity.tokens_[0] <= &currentEntity.tokens_[$-1];
+  }
+
+  private void consumeEntity()
+  {
+	entityStack_ = entries_.front;
+	entries_.popFront;
   }
 
   bool empty() { return tokens_.empty; }
-  EntityToken front() { return EntityToken(tokens_.front, entityStack_.empty ? null : entityStack_.back); }
+  EntityToken front() { return EntityToken(tokens_.front, !hasCurrentEntity() ? null : currentEntity); }
   TokenRangeResult save() { return this; }
   void popFront()
   {
 	tokens_ = tokens_[1 .. $];
 	if (!tokens_.empty)
 	{
-	  if (entityStack_.empty)
+	  if (!hasCurrentEntity())
 	  {
-		if (!entries_.empty &&
-			&entries_.front.back.tokens_[0] == &tokens_[0])
-		{
-		  entityStack_ = entries_.front;
-		  entries_.popFront;
-		}
+		if (isEntityStart())
+		  consumeEntity();
 	  }
-	  else if (&entityStack_.back.tokens_[$-1] < &tokens_[0])
+	  else if (isEntityDone())
 	  {
-		if (!entries_.empty &&
-			&entries_.front.back.tokens_[0] == &tokens_[0])
-		{
-		  entityStack_ = entries_.front;
-		  entries_.popFront;
-		}
+		if (isEntityStart())
+		  consumeEntity();
 		else
-		{
 		  entityStack_.popBack;
-		}
 	  }
-	  else if (!entries_.empty &&
-			   &entries_.front.back.tokens_[0] <= &entityStack_.back.tokens_[$-1] &&
-			   &entries_.front.back.tokens_[0] == &tokens_[0])
+	  else if (isEntityStart() && isNestedEntity())
 	  {
-		entityStack_ = entries_.front;
-		entries_.popFront;
+		consumeEntity();
 	  }
 	}
   }
 
+private:
   Entity[][] entries_;
-  Entity[] entityStack_;
   Token[] tokens_;
+  Entity[] entityStack_;
 }
 
-auto tokenRange(SourceFile sourceFile)
+auto namespaceTokenRange(Token[] tokens, Entity[] content)
 {
-  return TokenRangeResult(sourceFile);
+  return TokenRangeResult(treeRange!(t => t.type_ == "namespace",
+									 t => t.content_)(content)
+						  .array,
+						  tokens);
+}
+
+auto namespaceTokenRange(Token[] tokens)
+{
+  auto content = scanTokens(tokens);
+  return namespaceTokenRange(tokens, content);
+}
+
+auto namespaceTokenRange(SourceFile sourceFile)
+{
+  return namespaceTokenRange(sourceFile.tokens_, sourceFile.content_);
+}
+
+auto classTokenRange(Token[] tokens, Entity[] content)
+{
+  return TokenRangeResult(treeRange!(t => t.type_ == "namespace" || t.type_ == "class",
+									 t => t.content_)(content)
+						  .array,
+						  tokens);
+}
+
+auto classTokenRange(Token[] tokens)
+{
+  auto content = scanTokens(tokens);
+  return classTokenRange(tokens, content);
+}
+
+auto classTokenRange(SourceFile sourceFile)
+{
+  return classTokenRange(sourceFile.tokens_, sourceFile.content_);
 }
