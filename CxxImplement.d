@@ -99,7 +99,7 @@ void implement(string headerFileName, string sourceFileName)
   Token[] tokens;
   tokenize(content, sourceFileName, tokens);
 
-  if (!sourceFileName.empty && sourceFileName.exists)
+  if (!sourceFileName.empty)
   {
 	auto sourceTokens = readTokens(sourceFileName);
 
@@ -108,7 +108,7 @@ void implement(string headerFileName, string sourceFileName)
 	tokens = unifyFunctionsRange(mergedTokens).array;
   }
 
-  auto outfile = sourceFileName.empty ? stdout : File(sourceFileName, "w");
+  auto outfile = sourceFileName == "-" ? stdout : File(sourceFileName, "w");
   outfile.writeTokens(tokens);
   outfile.flush;
 }
