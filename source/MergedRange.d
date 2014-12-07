@@ -1,9 +1,11 @@
+module tooling.MergedRange;
+
 import std.algorithm, std.array, std.range, std.file, std.stdio, std.exception, std.conv, std.typecons;
 
-import Scanner;
-import TreeRange;
-import Tokenizer;
-import TokenRange;
+import tooling.Scanner;
+import tooling.TreeRange;
+import tooling.Tokenizer;
+import tooling.TokenRange;
 
 auto mergedRange(Token[][] tokensList)
 {

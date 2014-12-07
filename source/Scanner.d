@@ -1,3 +1,5 @@
+module tooling.Scanner;
+
 import std.algorithm;
 import std.conv;
 import std.exception;
@@ -7,8 +9,8 @@ import std.regex;
 import std.stdio;
 import std.string;
 
-import Tokenizer;
-import TreeRange;
+import tooling.Tokenizer;
+import tooling.TreeRange;
 
 class Entity
 {

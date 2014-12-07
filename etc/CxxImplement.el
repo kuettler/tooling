@@ -17,7 +17,7 @@ implementation in place."
 			  (save-some-buffers (not compilation-ask-about-save)
 								 compilation-save-buffers-predicate)
 			  (shell-command-on-region 1 (+ 1 (buffer-size buffer))
-									   (concat "CxxImplement -o - " header-file)
+									   (concat "tooling implement -o - " header-file)
 									   buffer t)
 			)))
 	  (message (concat "Only works on header files"))

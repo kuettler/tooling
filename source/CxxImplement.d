@@ -1,3 +1,5 @@
+module tooling.CxxImplement;
+
 import std.algorithm;
 import std.array;
 import std.conv;
@@ -6,12 +8,12 @@ import std.file;
 import std.range;
 import std.stdio;
 
-import Scanner;
-import TreeRange;
-import Tokenizer;
-import TokenRange;
-import MergedRange;
-import UnifyRange;
+import tooling.Scanner;
+import tooling.TreeRange;
+import tooling.Tokenizer;
+import tooling.TokenRange;
+import tooling.MergedRange;
+import tooling.UnifyRange;
 
 // Implement the cpp file to a given header
 
@@ -115,28 +117,27 @@ void implement(string headerFileName, string sourceFileName)
   outfile.flush;
 }
 
-int main(string[] args)
+int implementMain(string[] args)
 {
   string name = args[0];
+  string cmd = args[1];
   string infileName;
   string outfileName;
 
+  args = args[2 .. $];
+
   if (args.length > 1)
   {
-	if (args[1] == "-o" && args.length > 2)
+	if (args[0] == "-o")
 	{
-	  outfileName = args[2];
-	  args = args[3 .. $];
-	}
-	else
-	{
-	  args = args[1 .. $];
+	  outfileName = args[1];
+	  args = args[2 .. $];
 	}
   }
 
-  if (args.length == 0)
+  if (!args.length)
   {
-	writeln("Usage: ", name, " [-o outfile] inputfile");
+	writeln("Usage: ", name, " ", cmd, " [-o outfile] inputfile");
 	return 1;
   }
 

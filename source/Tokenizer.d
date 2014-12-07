@@ -2,6 +2,8 @@
 // License: Boost License 1.0, http://boost.org/LICENSE_1_0.txt
 // @author Andrei Alexandrescu (andrei.alexandrescu@facebook.com)
 
+module tooling.Tokenizer;
+
 import std.algorithm, std.array, std.ascii, std.conv, std.exception, std.regex,
   std.stdio, std.typecons, std.typetuple;
 

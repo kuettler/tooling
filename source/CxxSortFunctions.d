@@ -1,15 +1,17 @@
+module tooling.CxxSortFunctions;
+
 import std.algorithm, std.array, std.file, std.stdio, std.exception, std.conv;
 
-import Scanner;
-import SortRange;
-import TokenRange;
+import tooling.Scanner;
+import tooling.SortRange;
+import tooling.TokenRange;
 
-void main(string[] args)
+int sortFunctionsMain(string[] args)
 {
-  enforce(args.length > 1,
-          text("Usage:", args[0], " files..."));
+  enforce(args.length > 2,
+          text("Usage: ", args[0], " ", args[1], " files..."));
 
-  foreach (fi; 1 .. args.length)
+  foreach (fi; 2 .. args.length)
   {
     auto filename = args[fi];
 
@@ -21,4 +23,5 @@ void main(string[] args)
 	f.close;
     std.file.rename(newFile, filename);
   }
+  return 0;
 }
