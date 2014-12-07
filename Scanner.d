@@ -95,6 +95,28 @@ public:
   string[] suffix_;
 }
 
+bool isNamespace(Entity e)
+{
+  return e.type_ == "namespace";
+}
+
+bool isClass(Entity e)
+{
+  return e.type_ == "class";
+}
+
+bool isFunction(Entity e)
+{
+  return e.type_ == "function";
+}
+
+bool isInline(Entity e)
+{
+  // if the difference in length is just one, its tk!";", otherwise there is a
+  // pair of braces
+  return e.expr_.length+1 < e.tokens_.length;
+}
+
 Entity[] readTokenStream(Token[] tokens, ref ulong start)
 {
   Entity[] entries;

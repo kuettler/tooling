@@ -80,7 +80,9 @@ string createCxxFileContent(Entity[] entities, string indent, string[] classStac
 		result ~= createClass(entity, indent, classStack);
 		break;
 	  case "function":
-		result ~= createFunction(entity, indent, classStack);
+		if (!isInline(entity)) {
+		  result ~= createFunction(entity, indent, classStack);
+		}
 		break;
 	  default:
 		break;

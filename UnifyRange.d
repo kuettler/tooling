@@ -41,7 +41,7 @@ auto unifyFunctionsRange(Token[] tokens)
 		  auto t = tokenRange_.front;
 		  if (t.entity_)
 		  {
-			if (t.entity_.type_ == "namespace")
+			if (isNamespace(t.entity_))
 			{
 			  if (t.token_.value == "{")
 			  {

@@ -41,7 +41,7 @@ auto sortFunctionsRange(Token[] tokens)
 		  auto t = tokenRange_.front;
 		  if (t.entity_)
 		  {
-			if (t.entity_.type_ == "namespace")
+			if (isNamespace(t.entity_))
 			{
 			  if (t.token_.value == "{")
 			  {
@@ -62,7 +62,7 @@ auto sortFunctionsRange(Token[] tokens)
 				entityStack_.popBack;
 			  }
 			}
-			else if (t.entity_.type_ == "function")
+			else if (isFunction(t.entity_))
 			{
 			  if (t.entity_.name !in entityStack_.back)
 			  {
