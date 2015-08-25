@@ -1,5 +1,3 @@
-module tooling.TreeRange;
-
 import std.array, std.algorithm, std.range;
 
 // Walk a nested (tree) structure "depth-first". Return the path from root to

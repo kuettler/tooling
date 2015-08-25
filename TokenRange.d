@@ -1,10 +1,8 @@
-module tooling.TokenRange;
+import std.algorithm, std.array, std.file, std.stdio, std.exception, std.conv, std.typecons;
 
-import std.algorithm, std.array, std.file, std.stdio, std.exception, std.conv;
-
-import tooling.Scanner;
-import tooling.TreeRange;
-import tooling.Tokenizer;
+import Scanner;
+import TreeRange;
+import Tokenizer;
 
 alias EntityToken = Tuple!(Token, "token_", Entity, "entity_");
 

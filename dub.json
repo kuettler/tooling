@@ -1,9 +1,0 @@
-{
-	"name": "tooling",
-	"description": "Various small tools that help with C++ code editing.",
-	"license" : "Boost Software License - Version 1.0",
-	"copyright": "Copyright © 2014, ukuettler",
-	"authors": ["Ulrich Küttler"],
-	"dependencies": {
-	}
-}

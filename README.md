@@ -27,6 +27,7 @@ Utilities
 - `CxxImplement.d`: Given a header/source file pair, add new functions from header to source
 - `CxxMerge.d`: Merge multiple C++ files while preserving the namespace structure
 - `CxxSortFunctions.d`: Sort functions by name while preserving the namespace structure
+- `CxxAutoAzto.d`: Rewrite expressions that look like variable definitions to use the `auto` keyword
 
 These utils are very specific and will not work on your files.
 

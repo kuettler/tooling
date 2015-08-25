@@ -2,8 +2,6 @@
 // License: Boost License 1.0, http://boost.org/LICENSE_1_0.txt
 // @author Andrei Alexandrescu (andrei.alexandrescu@facebook.com)
 
-module tooling.Tokenizer;
-
 import std.algorithm, std.array, std.ascii, std.conv, std.exception, std.regex,
   std.stdio, std.typecons, std.typetuple;
 
@@ -61,7 +59,7 @@ struct TokenizerGenerator(alias tokens, alias reservedTokens) {
       }
       static assert(id >= 0 && id < TokenIDRep.max,
                     "Invalid token: " ~ symbol);
-      enum tk = TokenType2(cast(ubyte) id);
+      enum tk = TokenType2(cast(TokenIDRep) id);
     }
   }
 
@@ -266,6 +264,15 @@ CppLexer.Token[] tokenize(string input, string initialFilename = null) {
 
 void tokenize(string input, string initialFilename, ref CppLexer.Token[] t) {
   t = tokenize(input, initialFilename);
+}
+
+unittest
+{
+  writeln(tokenize("type", "unittest"));
+  writeln(tokenize("typed", "unittest"));
+  writeln(tokenize("typedef", "unittest"));
+  writeln(tokenize("typedefe", "unittest"));
+  writeln(tokenize("typeid", "unittest"));
 }
 
 /**

@@ -1,13 +1,11 @@
-module tooling.SortRange;
+import std.algorithm, std.array, std.file, std.stdio, std.exception, std.conv, std.typecons;
 
-import std.algorithm, std.array, std.file, std.stdio, std.exception, std.conv;
+import Scanner;
+import TreeRange;
+import Tokenizer;
+import TokenRange;
 
-import tooling.Scanner;
-import tooling.TreeRange;
-import tooling.Tokenizer;
-import tooling.TokenRange;
-
-auto sortFunctionsRange(Token[] tokens)
+auto unifyFunctionsRange(Token[] tokens)
 {
   struct Result
   {
@@ -35,7 +33,7 @@ auto sortFunctionsRange(Token[] tokens)
 	  {
 		functionTokens_.popFront();
 	  }
-	  else
+	  if (functionTokens_.empty)
 	  {
 		tokenRange_.popFront();
 		if (!tokenRange_.empty)
@@ -51,26 +49,20 @@ auto sortFunctionsRange(Token[] tokens)
 			  }
 			  else if (t.token_.value == "}")
 			  {
-				auto names = entityStack_
-				  .back
-				  .keys
-				  .array
-				  .sort
-				  .map!(name => entityStack_.back[name].tokens_);
-				if (!names.empty)
-				{
-				  functionTokens_ = names.reduce!((tokens, t) => tokens ~ t);
-				}
 				entityStack_.popBack;
 			  }
 			}
-			else if (isFunction(t.entity_))
+			else if (t.entity_.type_ == "function") // && entityStack_)
 			{
 			  if (t.entity_.name !in entityStack_.back)
 			  {
 				entityStack_.back[t.entity_.name] = t.entity_;
+				functionTokens_ = t.entity_.tokens_;
 			  }
-			  popFront;
+			  else
+			  {
+				popFront;
+			  }
 			}
 		  }
 		}
