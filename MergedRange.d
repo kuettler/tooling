@@ -172,6 +172,6 @@ auto mergedRange(Token[][] tokensList)
 
 auto mergedRange(string[] filenames)
 {
-  auto tokensList = filenames.map!(f => f.readTokens).array;
+  auto tokensList = filenames.map!(f => f.readInput.tokenize(f)).array;
   return mergedRange(tokensList);
 }

@@ -1,9 +1,10 @@
 import std.stdio;
-import Scanner : readTokens, scanTokens;
+import Scanner : readInput, scanTokens;
 
 void main()
 {
-  auto tokens = readTokens("/home/ukuettler/projects/xcard-base/MediatorCardLoading/MediatorCardLoadingFunctions.cpp");
+  auto filename = "TestFile.cpp";
+  auto tokens = filename.readInput.tokenize(filename);
   auto content = scanTokens(tokens);
   foreach (pos; [[259,14], [912,29]])
   {

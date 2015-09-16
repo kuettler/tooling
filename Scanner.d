@@ -142,7 +142,7 @@ Entity[] readTokenStream(Token[] tokens, ref ulong start)
   for (ulong i = start; i < tokens.length; i++)
   {
     auto token = tokens[i];
-    if (token.type_ is tk!";") // || token.type_ is tk!":")
+    if (token.type_ is tk!";" || token.type_ is tk!":")
     {
       if (i - start > 1)
       {
@@ -253,23 +253,24 @@ string detab(string input)
 }
 
 
-auto readTokens(string path)
+auto readInput(string path)
 {
-  string content;
   if (path == "-")
   {
-    foreach (ulong i, string line; lines(stdin))
-    {
-        //content ~= detab(line);
-        content ~= line;
-    }
+      string content;
+      foreach (ulong i, string line; lines(stdin))
+      {
+          //content ~= detab(line);
+          content ~= line;
+      }
+      return content;
   }
   else
   {
       //content = detab(std.file.readText(path));
-      content = std.file.readText(path);
+      return std.file.readText(path);
   }
-  return tokenize(content, path);
+  //return tokenize(content, path);
 }
 
 void writeTokens(File f, Token[] tokens)
@@ -285,7 +286,7 @@ struct SourceFile
 {
   this(string path)
   {
-    tokens_ = readTokens(path);
+   tokens_ = readInput(path).tokenize(path);
     content_ = scanTokens(tokens_);
   }
 

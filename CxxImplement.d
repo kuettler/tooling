@@ -19,7 +19,7 @@ string createNamespace(Entity entity, string indent)
 {
     return (indent ~ "namespace " ~ entity.name ~ "\n" ~
             indent ~ "{\n" ~
-            createCxxFileContent(entity.content_, indent ~ "  ", []) ~
+            createCxxFileContent(entity.content_, indent ~ "\t", []) ~
             indent ~ "}\n"
             );
 }
@@ -34,7 +34,7 @@ string createFunction(Entity entity, string indent, string[] classStack)
     auto className = classStack.joiner("::").to!string;
     if (className) className ~= "::";
     bool headerOnly(string name) {
-	foreach (w; ["explicit", "static", "override", "virtual"]) {
+      foreach (w; ["explicit", "static", "override", "virtual", "friend"]) {
             if (name == w) return true;
 	}
 	return false;
@@ -62,7 +62,7 @@ string createFunction(Entity entity, string indent, string[] classStack)
 	}
 	result ~= "\n" ~
             indent ~ "{\n" ~
-            indent ~ "  // FIXME: Implementation missing\n" ~
+            indent ~ "\t// FIXME: Implementation missing\n" ~
             indent ~ "}\n\n";
     }
     return result;
@@ -93,17 +93,15 @@ string createCxxFileContent(Entity[] entities, string indent, string[] classStac
 
 void implement(string headerFileName, string sourceFileName)
 {
-    auto headerTokens = readTokens(headerFileName);
-    auto entities = scanTokens(headerTokens);
+    auto entities = readInput(headerFileName).tokenize(headerFileName).scanTokens;
 
     auto content = createCxxFileContent(entities, "", []);
+    auto tokens = tokenize(content, sourceFileName);
 
-    Token[] tokens;
-    tokenize(content, sourceFileName, tokens);
-
-    if (!sourceFileName.empty)
+    // If output goes to stdout, there is no implementation file to read and merge
+    if (sourceFileName != "-")
     {
-	auto sourceTokens = readTokens(sourceFileName);
+	auto sourceTokens = readInput(sourceFileName).tokenize(sourceFileName);
 
 	// merge with preference to source tokens if available
 	auto mergedTokens = mergedRange([sourceTokens, tokens[0 .. $-1]]).array;
@@ -115,11 +113,25 @@ void implement(string headerFileName, string sourceFileName)
     outfile.flush;
 }
 
+unittest
+{
+    auto header = "namespace TestNamespace\n{\n\tclass TestClass\n\t{\n\tpublic:\n\t\texplicit TestClass(int i);\n\t\tvirtual ~TestClass() {}\n\n\t};\n}\n";
+    auto implementation = "namespace TestNamespace\n{\n\tTestClass::TestClass(int i)\n\t{\n\t\t// FIXME: Implementation missing\n\t}\n\n}\n";
+
+    assert(header.tokenize("-").scanTokens.createCxxFileContent("", []) == implementation);
+}
+
 int main(string[] args)
 {
     string name = args[0];
     string infileName;
     string outfileName;
+
+    if (args.length == 1)
+    {
+	writeln("Usage: ", name, " [-o outfile] inputfile");
+	return 1;
+    }
 
     if (args.length > 1)
     {
@@ -132,12 +144,6 @@ int main(string[] args)
 	{
             args = args[1 .. $];
 	}
-    }
-
-    if (args.length == 0)
-    {
-	writeln("Usage: ", name, " [-o outfile] inputfile");
-	return 1;
     }
 
     infileName = args[0];

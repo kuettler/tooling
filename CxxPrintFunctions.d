@@ -10,7 +10,7 @@ import TokenRange;
 
 void printFunctions(string filename)
 {
-  auto tokens = readTokens(filename);
+  auto tokens = readInput(filename).tokenize(filename);
 
   //auto newFile = filename ~ ".tmp";
   //auto f = File(newFile, "w");
