@@ -96,6 +96,7 @@ unittest
     auto text = "namespace\n{\n}";
     auto tokens = tokenize(text, "stdin");
     writeln(namespaceTokenRange(tokens));
+    writeln(namespaceTokenRange(tokenize("", "stdin")));
 }
 
 auto classTokenRange(Token[] tokens, Entity[] content)

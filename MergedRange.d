@@ -18,13 +18,15 @@ auto mergedRange(Token[][] tokensList)
       }
       pos_ = 0;
       prependNewline_ = false;
-      nextPosition();
+      advancePositionIfFinished();
       handleNamespace();
     }
 
     bool empty() { return tokenRanges_.map!(r => r.empty).reduce!((e, v) => v && e); }
     Token front()
     {
+      if (tokenRanges_[pos_].empty)
+        throw new Exception("Empty range " ~ to!string(pos_));
       if (prependNewline_)
       {
         auto t = tokenRanges_[pos_].front;
@@ -39,7 +41,7 @@ auto mergedRange(Token[][] tokensList)
 
     Result save() { return this; }
 
-    private void nextPosition()
+    private void advancePositionIfFinished()
     {
       // If this token range (to this entity) is empty, switch to the next
       // token range on the same namespace level.
@@ -95,7 +97,7 @@ auto mergedRange(Token[][] tokensList)
           {
             pos_ = p.front[0];
             prependNewline_ = true;
-            //nextPosition();
+            advancePositionIfFinished();
           }
           else
           {
@@ -162,7 +164,7 @@ auto mergedRange(Token[][] tokensList)
       {
         tokenRanges_[pos_].popFront;
       }
-      nextPosition();
+      advancePositionIfFinished();
       handleNamespace();
     }
 
@@ -187,7 +189,9 @@ unittest
 {
     auto text = "\nnamespace\n{\nint i;\n}\n";
     auto tokens = tokenize(text, "stdin");
-    auto mergedTokens = mergedRange([tokens, tokens, tokens, tokens]).array;
-    writeln(mergedTokens);
-    stdout.writeTokens(mergedTokens);
+    // auto mergedTokens = mergedRange([tokens, tokens, tokens, tokens]).array;
+    // writeln(mergedTokens);
+    // stdout.writeTokens(mergedTokens);
+
+    writeln(mergedRange([tokenize("", "stdin"), tokens]).array);
 }

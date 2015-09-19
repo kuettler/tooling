@@ -142,7 +142,7 @@ Entity[] readTokenStream(Token[] tokens, ref ulong start)
   for (ulong i = start; i < tokens.length; i++)
   {
     auto token = tokens[i];
-    if (token.type_ is tk!";" || token.type_ is tk!":")
+    if (token.type_ is tk!";") // || token.type_ is tk!":")
     {
       if (i - start > 1)
       {

@@ -102,10 +102,12 @@ void implement(string headerFileName, string sourceFileName)
     if (!sourceFileName.empty)
     {
 	auto sourceTokens = readInput(sourceFileName).tokenize(sourceFileName);
-
-	// merge with preference to source tokens if available
-	auto mergedTokens = mergedRange([sourceTokens, tokens[0 .. $-1]]).array;
-	tokens = unifyFunctionsRange(mergedTokens).array;
+        if (sourceTokens.length > 1)
+        {
+            // merge with preference to source tokens if available
+            auto mergedTokens = mergedRange([sourceTokens, tokens[0 .. $-1]]).array;
+            tokens = unifyFunctionsRange(mergedTokens).array;
+        }
     }
 
     auto outfile = sourceFileName == "-" ? stdout : File(sourceFileName, "w");
