@@ -48,6 +48,14 @@ public:
         returnType_ = m["return"].strip;
         arguments_ = m["args"].strip.splitter(" , ").array;
         suffix_ = m["suffix"].strip.splitter(" ").array;
+
+        if ((expr[0].value == "public" ||
+             expr[0].value == "protected" ||
+             expr[0].value == "private") && expr[1].value == ":")
+        {
+            expr = expr[2 .. $-1];
+            tokens = tokens[2 .. $-1];
+        }
       }
     }
 
@@ -142,7 +150,7 @@ Entity[] readTokenStream(Token[] tokens, ref ulong start)
   for (ulong i = start; i < tokens.length; i++)
   {
     auto token = tokens[i];
-    if (token.type_ is tk!";") // || token.type_ is tk!":")
+    if (token.type_ is tk!";")
     {
       if (i - start > 1)
       {
