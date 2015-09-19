@@ -18,6 +18,8 @@ auto mergedRange(Token[][] tokensList)
       }
       pos_ = 0;
       prependNewline_ = false;
+      nextPosition();
+      handleNamespace();
     }
 
     bool empty() { return tokenRanges_.map!(r => r.empty).reduce!((e, v) => v && e); }
@@ -72,18 +74,12 @@ auto mergedRange(Token[][] tokensList)
       }
     }
 
-    void popFront()
+    private void handleNamespace()
     {
-      prependNewline_ = false;
-      if (!tokenRanges_[pos_].empty)
-      {
-        tokenRanges_[pos_].popFront;
-      }
-      nextPosition();
       if (!tokenRanges_[pos_].empty)
       {
         nextState(pos_);
-        if (!rangeState_[pos_].name.empty)
+        if (!rangeState_[pos_].action.empty)
         {
           // Cycle over the states of all inputs. We want to find the next
           // normal input and slice it in.
@@ -94,12 +90,12 @@ auto mergedRange(Token[][] tokensList)
             // .take(rangeState_.length)
             .array;
           //std.stdio.writeln(states);
-          auto p = states.find!(t => t[1].name.empty);
+          auto p = states.find!(t => t[1].action.empty);
           if (!p.empty)
           {
             pos_ = p.front[0];
             prependNewline_ = true;
-            nextPosition();
+            //nextPosition();
           }
           else
           {
@@ -159,6 +155,17 @@ auto mergedRange(Token[][] tokensList)
       }
     }
 
+    void popFront()
+    {
+      prependNewline_ = false;
+      if (!tokenRanges_[pos_].empty)
+      {
+        tokenRanges_[pos_].popFront;
+      }
+      nextPosition();
+      handleNamespace();
+    }
+
     TokenRangeResult[] tokenRanges_;
     alias RangeState = Tuple!(string, "name", string, "action");
     RangeState[] rangeState_;
@@ -174,4 +181,13 @@ auto mergedRange(string[] filenames)
 {
   auto tokensList = filenames.map!(f => f.readInput.tokenize(f)).array;
   return mergedRange(tokensList);
+}
+
+unittest
+{
+    auto text = "\nnamespace\n{\nint i;\n}\n";
+    auto tokens = tokenize(text, "stdin");
+    auto mergedTokens = mergedRange([tokens, tokens, tokens, tokens]).array;
+    writeln(mergedTokens);
+    stdout.writeTokens(mergedTokens);
 }

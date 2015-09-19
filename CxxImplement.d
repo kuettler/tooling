@@ -99,7 +99,7 @@ void implement(string headerFileName, string sourceFileName)
     auto tokens = tokenize(content, sourceFileName);
 
     // If output goes to stdout, there is no implementation file to read and merge
-    if (sourceFileName != "-")
+    if (!sourceFileName.empty)
     {
 	auto sourceTokens = readInput(sourceFileName).tokenize(sourceFileName);
 

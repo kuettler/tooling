@@ -77,10 +77,7 @@ private:
 
 auto namespaceTokenRange(Token[] tokens, Entity[] content)
 {
-  return TokenRangeResult(treeRange!(t => t.type_ == "namespace",
-									 t => t.content_)(content)
-						  .array,
-						  tokens);
+  return TokenRangeResult(treeRange!(t => t.type_ == "namespace", t => t.content_)(content).array, tokens);
 }
 
 auto namespaceTokenRange(Token[] tokens)
@@ -92,6 +89,13 @@ auto namespaceTokenRange(Token[] tokens)
 auto namespaceTokenRange(SourceFile sourceFile)
 {
   return namespaceTokenRange(sourceFile.tokens_, sourceFile.content_);
+}
+
+unittest
+{
+    auto text = "namespace\n{\n}";
+    auto tokens = tokenize(text, "stdin");
+    writeln(namespaceTokenRange(tokens));
 }
 
 auto classTokenRange(Token[] tokens, Entity[] content)
