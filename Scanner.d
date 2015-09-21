@@ -53,8 +53,8 @@ public:
              expr[0].value == "protected" ||
              expr[0].value == "private") && expr[1].value == ":")
         {
-            expr = expr[2 .. $-1];
-            tokens = tokens[2 .. $-1];
+            expr = expr[2 .. $];
+            tokens = tokens[2 .. $];
         }
       }
     }

@@ -195,3 +195,11 @@ unittest
 
     writeln(mergedRange([tokenize("", "stdin"), tokens]).array);
 }
+
+unittest
+{
+  auto mergedTokens = mergedRange([tokenize("\nnamespace\n{\nnamespace\n{\nint a;\n}\nint i()\n{\na = 3;\n}\n}\n", "stdin"),
+                                   tokenize("\nnamespace\n{\nint i()\n{\n}\nint j()\n{\n}\n}\n", "stdin"),]).array;
+  //writeln(mergedTokens);
+  stdout.writeTokens(mergedTokens);
+}

@@ -101,10 +101,7 @@ unittest
 
 auto classTokenRange(Token[] tokens, Entity[] content)
 {
-  return TokenRangeResult(treeRange!(t => t.type_ == "namespace" || t.type_ == "class",
-									 t => t.content_)(content)
-						  .array,
-						  tokens);
+  return TokenRangeResult(treeRange!(t => t.type_ == "namespace" || t.type_ == "class", t => t.content_)(content).array, tokens);
 }
 
 auto classTokenRange(Token[] tokens)
