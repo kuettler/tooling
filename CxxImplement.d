@@ -6,154 +6,147 @@ import std.file;
 import std.range;
 import std.stdio;
 
-import Scanner;
-import TreeRange;
-import Tokenizer;
-import TokenRange;
-import MergedRange;
-import UnifyRange;
+import Statement : Statement, FunctionStatement, readStatements, writeStatements, merge;
 
 // Implement the cpp file to a given header
 
-string createNamespace(Entity entity, string indent)
+string createNamespace(Statement statement, string indent)
 {
-    return (indent ~ "namespace " ~ entity.name ~ "\n" ~
-            indent ~ "{\n" ~
-            createCxxFileContent(entity.content_, indent ~ "\t", []) ~
-            indent ~ "}\n"
-            );
+  return (indent ~ "namespace " ~ statement.name ~ "\n" ~
+          indent ~ "{\n" ~
+          createCxxFileContent(statement.getStatements, indent ~ "\t", []) ~
+          indent ~ "}\n"
+    );
 }
 
-string createClass(Entity entity, string indent, string[] classStack)
+string createClass(Statement statement, string indent, string[] classStack)
 {
-    return createCxxFileContent(entity.content_, indent, classStack ~ entity.name);
+  return createCxxFileContent(statement.getStatements, indent, classStack ~ statement.name);
 }
 
-string createFunction(Entity entity, string indent, string[] classStack)
+string createFunction(FunctionStatement statement, string indent, string[] classStack)
 {
-    auto className = classStack.joiner("::").to!string;
-    if (className) className ~= "::";
-    bool headerOnly(string name) {
-      foreach (w; ["explicit", "static", "override", "virtual", "friend"]) {
-            if (name == w) return true;
-	}
-	return false;
+  auto className = classStack.joiner("::").to!string;
+  if (className) className ~= "::";
+  bool headerOnly(string name) {
+    return !find(["explicit", "static", "override", "virtual", "friend"], name).empty;
+  }
+  auto entities = statement.entities[0 .. $-1].filter!(t => !headerOnly(t.value)).array;
+  string result;
+  if (entities) {
+    result ~= indent;
+    bool classNameInserted = false;
+    // constructor or destructor
+    if (entities[0].value == "~" || entities[0].value == statement.name) {
+      result ~= className;
+      classNameInserted = true;
     }
-    auto tokens = entity.expr_.filter!(t => !headerOnly(t.value)).array;
-    string result;
-    if (tokens) {
-	result ~= indent;
-	bool classNameInserted = false;
-	if (classStack) {
-            if (tokens[0].value == "~" || tokens[0].value == entity.name_) {
-		result ~= className;
-		classNameInserted = true;
-            }
-	}
-	result ~= tokens[0].value;
-	foreach (t; tokens[1 .. $]) {
-            if (!classNameInserted && (t.value == "~" || t.value == entity.name_)) {
-		result ~= t.precedingWhitespace_ ~ className ~ t.value;
-		classNameInserted = true;
-            }
-            else {
-		result ~= t.precedingWhitespace_ ~ t.value;
-            }
-	}
-	result ~= "\n" ~
-            indent ~ "{\n" ~
-            indent ~ "\t// FIXME: Implementation missing\n" ~
-            indent ~ "}\n\n";
+    result ~= entities[0].value;
+    foreach (t; entities[1 .. $]) {
+      if (!classNameInserted && (t.value == "~" || t.value == statement.functionName)) {
+        result ~= t.precedingWhitespace ~ className ~ t.value;
+        classNameInserted = true;
+      }
+      else {
+        result ~= t.precedingWhitespace ~ t.value;
+      }
     }
-    return result;
+    result ~= "\n" ~
+              indent ~ "{\n" ~
+              indent ~ "\t// FIXME: Implementation missing\n" ~
+              indent ~ "}\n\n";
+  }
+  return result;
 }
 
-string createCxxFileContent(Entity[] entities, string indent, string[] classStack)
+string createCxxFileContent(Statement[] statements, string indent, string[] classStack)
 {
-    string result;
-    foreach (entity; entities) {
-	switch (entity.type_) {
-            case "namespace":
-		result ~= createNamespace(entity, indent);
-		break;
-            case "class":
-		result ~= createClass(entity, indent, classStack);
-		break;
-            case "function":
-		if (!isInline(entity)) {
-                    result ~= createFunction(entity, indent, classStack);
-		}
-		break;
-            default:
-		break;
-	}
+  string result;
+  foreach (s; statements) {
+    switch (s.type) {
+      case "namespace":
+        result ~= createNamespace(s, indent);
+        break;
+      case "class":
+        result ~= createClass(s, indent, classStack);
+        break;
+      case "function":
+        if (auto f = cast(FunctionStatement)s)
+        {
+          if (f.isDeclaration) {
+            result ~= createFunction(f, indent, classStack);
+          }
+        }
+        break;
+      default:
+        break;
     }
-    return result;
+  }
+  return result;
 }
 
 void implement(string headerFileName, string sourceFileName)
 {
-    auto entities = readInput(headerFileName).tokenize(headerFileName).scanTokens;
+  auto content = createCxxFileContent(readStatements(headerFileName), "", []);
+  auto outfile = sourceFileName == "-" ? stdout : File(sourceFileName, "w");
 
-    auto content = createCxxFileContent(entities, "", []);
-    auto tokens = tokenize(content, sourceFileName);
+  // If output goes to stdout, there is no implementation file to read and merge
+  if (!sourceFileName.empty)
+  {
+    auto statements = readStatements(content, sourceFileName);
+    auto sourceStatements = readStatements(sourceFileName);
 
-    // If output goes to stdout, there is no implementation file to read and merge
-    if (!sourceFileName.empty)
-    {
-	auto sourceTokens = readInput(sourceFileName).tokenize(sourceFileName);
-        if (sourceTokens.length > 1)
-        {
-            // merge with preference to source tokens if available
-            auto mergedTokens = mergedRange([sourceTokens, tokens[0 .. $-1]]).array;
-            tokens = unifyFunctionsRange(mergedTokens).array;
-        }
-    }
+    // merge with preference to source tokens if available
+    statements = merge(sourceStatements, statements);
+    outfile.writeStatements(statements);
+  }
+  else
+  {
+    outfile.write(content);
+  }
 
-    auto outfile = sourceFileName == "-" ? stdout : File(sourceFileName, "w");
-    outfile.writeTokens(tokens);
-    outfile.flush;
+  outfile.flush;
 }
 
 unittest
 {
-    auto header = "namespace TestNamespace\n{\n\tclass TestClass\n\t{\n\tpublic:\n\t\texplicit TestClass(int i);\n\t\tvirtual ~TestClass() {}\n\n\t};\n}\n";
-    auto implementation = "namespace TestNamespace\n{\n\tTestClass::TestClass(int i)\n\t{\n\t\t// FIXME: Implementation missing\n\t}\n\n}\n";
+  auto header = "namespace TestNamespace\n{\n\tclass TestClass\n\t{\n\tpublic:\n\t\texplicit TestClass(int i);\n\t\tvirtual ~TestClass() {}\n\n\t};\n}\n";
+  auto implementation = "namespace TestNamespace\n{\n\tTestClass::TestClass(int i)\n\t{\n\t\t// FIXME: Implementation missing\n\t}\n\n}\n";
 
-    assert(header.tokenize("-").scanTokens.createCxxFileContent("", []) == implementation);
+  assert(header.tokenize("-").scanTokens.createCxxFileContent("", []) == implementation);
 }
 
 int main(string[] args)
 {
-    string name = args[0];
-    string infileName;
-    string outfileName;
+  string name = args[0];
+  string infileName;
+  string outfileName;
 
-    if (args.length == 1)
+  if (args.length == 1)
+  {
+    writeln("Usage: ", name, " [-o outfile] inputfile");
+    return 1;
+  }
+
+  if (args.length > 1)
+  {
+    if (args[1] == "-o" && args.length > 2)
     {
-	writeln("Usage: ", name, " [-o outfile] inputfile");
-	return 1;
+      outfileName = args[2];
+      args = args[3 .. $];
     }
-
-    if (args.length > 1)
+    else
     {
-	if (args[1] == "-o" && args.length > 2)
-	{
-            outfileName = args[2];
-            args = args[3 .. $];
-	}
-	else
-	{
-            args = args[1 .. $];
-	}
+      args = args[1 .. $];
     }
+  }
 
-    infileName = args[0];
-    if (infileName != "-" && outfileName.empty)
-    {
-	outfileName = infileName.splitter('.').dropBack(1).joiner(".").to!string ~ ".cpp";
-    }
+  infileName = args[0];
+  if (infileName != "-" && outfileName.empty)
+  {
+    outfileName = infileName.splitter('.').dropBack(1).joiner(".").to!string ~ ".cpp";
+  }
 
-    implement(infileName, outfileName);
-    return 0;
+  implement(infileName, outfileName);
+  return 0;
 }
