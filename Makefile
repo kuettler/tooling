@@ -1,5 +1,5 @@
 
-all: CxxMerge CxxSortFunctions CxxImplement CxxAutoAuto
+all: CxxMerge CxxSortFunctions CxxImplement CxxAutoAuto CxxFormat
 
 CxxMerge: CxxMerge.d Tokenizer.d Statement.d
 	dmd CxxMerge.d Tokenizer.d Statement.d
@@ -12,3 +12,6 @@ CxxImplement: CxxImplement.d Tokenizer.d Statement.d
 
 CxxAutoAuto: CxxAutoAuto.d Tokenizer.d
 	dmd CxxAutoAuto.d Tokenizer.d
+
+CxxFormat: CxxFormat.d Tokenizer.d
+	dmd CxxFormat.d Tokenizer.d

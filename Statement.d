@@ -328,6 +328,18 @@ Statement[] readStatements(string content, string filename)
   return statements;
 }
 
+void writeStatements(string name, Statement[] statements)
+{
+  if (name == "-")
+  {
+    writeStatements(stdout, statements);
+  }
+  else
+  {
+    writeStatements(File(name, "w"), statements);
+  }
+}
+
 void writeStatements(File f, Statement[] statements)
 {
   foreach(s; statements) {
