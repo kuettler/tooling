@@ -62,6 +62,17 @@ void main(string[] args)
             t.precedingWhitespace_ = "";
           }
         }
+        else if (t.type_ is tk!"+") // || t.type_ is tk!"-")
+        {
+          if (!t.precedingWhitespace_.canFind("\n"))
+          {
+            t.precedingWhitespace_ = " ";
+          }
+          if (!tokens[i+1].precedingWhitespace_.canFind("\n"))
+          {
+            tokens[i+1].precedingWhitespace_ = " ";
+          }
+        }
         else if (t.type_ is tk!":")
         {
           if (i > 1 && tokens[i-2].value == "class")

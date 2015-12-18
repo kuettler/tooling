@@ -1,5 +1,5 @@
 import std.algorithm : splitter, find, chunkBy, map, joiner, cmp;
-import std.array : array;
+import std.array : Appender, array;
 import std.conv : text;
 import std.file : readText;
 import std.range : chain;
@@ -15,6 +15,7 @@ class Entity
 public:
   string precedingWhitespace() const { return ""; }
   string value() const { return ""; }
+  string valueString() const { return ""; }
   void print(File f) const {}
   Statement[] getStatements() { return Statement[].init; }
 }
@@ -30,6 +31,7 @@ public:
   TokenType type() const { return t.type_; }
   override string precedingWhitespace() const { return t.precedingWhitespace_; }
   override string value() const { return t.value; }
+  override string valueString() const { return t.precedingWhitespace_ ~ t.value; }
   override void print(File f) const {
     if (type is tk!"\0")
     {
@@ -52,6 +54,13 @@ public:
 
   override string precedingWhitespace() const { return entities_.front.precedingWhitespace; }
   override string value() const { return "{ ... }"; }
+  override string valueString() const {
+    Appender!string app;
+    foreach (e; entities_) {
+      app.put(e.valueString());
+    }
+    return app.data;
+  }
   override void print(File f) const {
     foreach (e; entities_) {
       e.print(f);
@@ -180,7 +189,8 @@ public:
   // We do not look inside functions right now. Ignore.
   override Statement[] getStatements() { return Statement[].init; }
 
-  bool isDeclaration() { return cast(NestedEntity)entities_[$-1] is null; }
+  NestedEntity getFunctionBody() { return cast(NestedEntity)entities_[$-1]; }
+  bool isDeclaration() { return getFunctionBody() is null; }
 }
 
 Statement createStatement(Entity[] entities, string[string] info)
