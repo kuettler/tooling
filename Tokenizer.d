@@ -151,7 +151,7 @@ struct TokenizerGenerator(alias tokens, alias reservedTokens) {
     return result;
   }
 
-//pragma(msg, generateCases([NonAlphaTokens, Keywords]));
+  //pragma(msg, generateCases([NonAlphaTokens, Keywords]));
 
   static Tuple!(size_t, size_t, TokenType2)
   match(R)(R r) {
@@ -404,8 +404,8 @@ CppLexer.Token nextToken(ref string pc, ref size_t line) {
     auto lskip = std.algorithm.count(initialPc[0 .. delta], '\n');
     if (initialLine + lskip != line) {
       stderr.writeln("Flint tokenization error: muched '",
-          initialPc[0 .. delta], "' (token type '", tt.sym(), "'), "
-          "which contains ", lskip, " newlines, "
+          initialPc[0 .. delta], "' (token type '", tt.sym(), "'), " ~
+          "which contains ", lskip, " newlines, " ~
           "but line has been incremented by ", line - initialLine);
       throw new Exception("Internal flint error");
     }

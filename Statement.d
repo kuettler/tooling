@@ -1,5 +1,5 @@
-import std.algorithm : splitter, find, chunkBy, map, joiner, cmp;
-import std.array : Appender, array;
+import std.algorithm : splitter, find, chunkBy, map, joiner, cmp, startsWith, endsWith, remove;
+import std.array : Appender, array, replace;
 import std.conv : text;
 import std.file : readText;
 import std.range : chain;
@@ -16,7 +16,8 @@ public:
   string precedingWhitespace() const { return ""; }
   string value() const { return ""; }
   string valueString() const { return ""; }
-  void print(File f) const {}
+  void print(File f) {}
+  void printSimple(File f) {}
   Statement[] getStatements() { return Statement[].init; }
 }
 
@@ -32,7 +33,7 @@ public:
   override string precedingWhitespace() const { return t.precedingWhitespace_; }
   override string value() const { return t.value; }
   override string valueString() const { return t.precedingWhitespace_ ~ t.value; }
-  override void print(File f) const {
+  override void print(File f) {
     if (type is tk!"\0")
     {
       //f.write(t.precedingWhitespace_);
@@ -41,6 +42,9 @@ public:
     {
       f.write(t.precedingWhitespace_, t.value);
     }
+  }
+  override void printSimple(File f) {
+    print(f);
   }
 }
 
@@ -61,9 +65,17 @@ public:
     }
     return app.data;
   }
-  override void print(File f) const {
-    foreach (e; entities_) {
-      e.print(f);
+  override void print(File f) {
+    entities_.front.print(f);
+    foreach (s; getStatements()) {
+      s.print(f);
+    }
+    entities_.back.print(f);
+  }
+  override void printSimple(File f) {
+    foreach(e; entities_)
+    {
+      e.printSimple(f);
     }
   }
 
@@ -103,13 +115,61 @@ Entity[] createEntities(Token[] tokens)
 
 auto structRe = regex(r"^(?P<type>namespace|class|struct|enum|union)( (?P<name>\w+))?");
 
-auto functionRe = regex(r"(template <[^>]+> )?" ~
-                        r"(?P<return>([a-zA-Z0-9_&<,>* ]+|(::))+ )?" ~
-                        r"(?P<name>(((~ )|(:: ))?[a-zA-Z0-9_]+|( :: ))+)" ~
-                        r"(o?perator *.[^(]*)?" ~
-                        r" \( (?P<args>[a-zA-Z0-9_ :&<,>*]*)\)" ~
+// auto functionRe = regex(r"(template <[^>]+> )?" ~
+//                         r"(?P<return>([a-zA-Z0-9_&<,>* ]+|(::[a-zA-Z0-9_&<,>* ]+))+ )?" ~
+//                         r"(?P<name>(((~ )|(:: ))?[a-zA-Z0-9_]+|( :: ))+)" ~
+//                         r"(o?perator *.[^(]*)?" ~
+//                         r" \( (?P<args>[a-zA-Z0-9_ :&<,>*]*)\)" ~
+//                         r"(?P<suffix> [a-zA-Z]+)*"
+//   );
+
+auto functionRe = regex(r"(?P<template>template <[^>]+> )?" ~
+                        r"(?P<virtual>virtual )?" ~
+                        r"(?P<inline>inline )?" ~
+                        r"(?P<return>[:a-zA-Z0-9_&<,>* ]*[a-zA-Z0-9_&>*] )?" ~
+                        r"(?P<name>[~a-zA-Z_][:a-zA-Z0-9_ ]*.[^(]*)" ~
+                        r" \( (?P<args>[a-zA-Z0-9_ :&<,>*.]*)\)" ~
                         r"(?P<suffix> [a-zA-Z]+)*"
   );
+
+unittest
+{
+  auto content = q{
+			namespace
+			{
+				template <class T>
+				void throwErrorOrCollectNewStyle(bool isNewStyle,
+				                                 std::set<std::string>& errorIdentifiers,
+				                                 const std::string& errorCode,
+				                                 const std::string& msg,
+				                                 const std::string& pos,
+				                                 const Ice::Current& current)
+				{
+					auto if (isNewStyle) ->
+					{
+						errorIdentifiers.insert(ApiUtil::getErrorIdentifier(errorCode));
+					}
+					else
+					{
+						throwWithError<T>(msg, pos, current);
+					}
+				}
+			}
+  };
+
+  // auto tokens = content.tokenize("");
+  // auto entities = createEntities(tokens);
+  // auto line = entities.map!(e => e.value).joiner(" ").text;
+  // auto m = line.matchFirst(functionRe);
+  // foreach (n; ["args", "template", "return", "name", "suffix"])
+  // {
+  //   writeln(n, ": ", m[n]);
+  // }
+
+  auto statements = readStatements(content, "");
+  writeStatements("-", statements);
+  writeln();
+}
 
 auto getStatementType(Entity[] entities)
 {
@@ -125,6 +185,9 @@ auto getStatementType(Entity[] entities)
   {
     return ["type": "function",
             "name": m["name"],
+            "virtual" : m["virtual"],
+            "inline" : m["inline"],
+            "template": m["template"],
             "return": m["return"].strip,
             "args": m["args"].strip,
             "suffix": m["suffix"].strip,
@@ -168,17 +231,96 @@ public:
 class FunctionStatement : Statement
 {
 private:
+  string template_;
   string returnType_;
   string[] args_;
   string[] suffix_;
+  string virtual;
+  string inline;
 
 public:
-  this(string type, string name, string returnType, string[] args, string[] suffix, Entity[] entities) {
+  this(string type, string templateStr, string virtual, string inline, string name, string returnType, string[] args, string[] suffix, Entity[] entities) {
     super(type, name, entities);
+    this.template_ = templateStr;
+    this.virtual = virtual;
+    this.inline = inline;
     this.returnType_ = returnType;
     this.args_ = args;
     this.suffix_ = suffix;
   }
+
+  // print functions auto style
+override void print(File f) {
+    if (returnType_ == "auto") {
+      foreach (e; this.entities()) {
+        e.printSimple(f);
+      }
+      return;
+    }
+
+    bool isTypeless = returnType_ == "";
+    auto functionEntities = this.entities();
+
+    f.write(functionEntities.front.precedingWhitespace, template_, inline, virtual, isTypeless ? "" : "auto ", super.name);
+    while (functionEntities.front.value != "(")
+    {
+    functionEntities = functionEntities[1 .. $];
+    }
+    while (functionEntities.front.value != ")")
+    {
+    functionEntities.front.print(f);
+    functionEntities = functionEntities[1 .. $];
+    }
+    functionEntities.front.print(f);
+    functionEntities = functionEntities[1 .. $];
+
+    bool endsWithSemicolon = endsWith(functionEntities.back.value, ";");
+    bool functionDefined = false;
+    bool pureVirtual = false;
+    bool hasOverride = false;
+
+    foreach (e; functionEntities) {
+        if (!find(e.value, "{").empty) {
+            functionDefined = true;
+            break;
+        }
+    }
+
+    if (!functionDefined){
+        foreach(e; functionEntities) {
+            if (e.value == "=" || e.value == "0") {
+                pureVirtual = true;
+            } else if (e.value == "override") {
+                hasOverride = true;
+            } else {
+                f.write(replace(e.value, ";",""), " ");
+            }
+        }
+        if (!isTypeless) {
+            f.write(" -> ", returnType_);
+        }
+        if (pureVirtual) {
+            f.write("= 0");
+        }
+        if (hasOverride) {
+            f.write(" override");
+        }
+        if(endsWithSemicolon) {
+            f.write(";");
+        }
+    } else {
+        while (functionEntities.length && !functionEntities.front.value.startsWith("{")) {
+            functionEntities.front.print(f);
+            functionEntities = functionEntities[1..$];
+        }
+        if (!isTypeless) {
+            f.write(" -> ", returnType_);
+        }
+        foreach(e; functionEntities) {
+            e.printSimple(f);
+        }
+    }
+}
 
   override string name() {
     return (super.name ~ "(" ~ args_.joiner(", ").text ~ ") " ~ suffix_.joiner(" ").text).strip;
@@ -199,6 +341,9 @@ Statement createStatement(Entity[] entities, string[string] info)
   {
     case "function":
       return new FunctionStatement(info["type"],
+                                   info["template"],
+                                   info["virtual"],
+                                   info["inline"],
                                    info["name"],
                                    info["return"],
                                    info["args"].splitter(" , ").array,
@@ -274,11 +419,15 @@ Statement[] splitStatements(Entity[] entities)
     auto e = entities[i];
     if (start < i)
     {
-      if (auto statement = beginsStatement(entities[start .. i], e))
+      auto prevValue = entities[i-1].value;
+      if (prevValue != "<" && prevValue != ",")
       {
-        statements ~= statement;
-        start = i;
-        continue;
+        if (auto statement = beginsStatement(entities[start .. i], e))
+        {
+          statements ~= statement;
+          start = i;
+          continue;
+        }
       }
     }
     if (auto statement = endsStatement(entities[start .. i+1]))
@@ -355,6 +504,7 @@ void writeStatements(File f, Statement[] statements)
   foreach(s; statements) {
     s.print(f);
   }
+  f.writeln();
 }
 
 Statement merge(Statement lhs, Statement rhs)
