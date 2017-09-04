@@ -73,6 +73,7 @@ struct TokenizerGenerator(alias tokens, alias reservedTokens) {
     string precedingWhitespace_;
     size_t line_;
     string file_;
+    size_t position_;
 
     string value() const {
       return value_ ? value_ : type_.sym;
@@ -250,11 +251,17 @@ CppLexer.Token[] tokenize(string input, string initialFilename = null) {
   CppLexer.Token[] output;
   auto file = initialFilename;
   size_t line = 1;
+  auto original = input;
 
   for (;;) {
     auto t = nextToken(input, line);
     t.file_ = initialFilename;
     //writeln(t);
+    auto p = t.value_.ptr - original.ptr;
+    if (p >= 0 && p < original.length)
+    {
+      t.position_ = p;
+    }
     output ~= t;
     if (t.type_ is CppLexer.tk!"\0") break;
   }

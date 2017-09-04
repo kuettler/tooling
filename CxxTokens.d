@@ -38,7 +38,7 @@ int main(string[] args)
   writeln("[");
   foreach (t; tokens)
   {
-    writef("  {:type \"%s\" :line %d ", t.type_.sym, t.line_);
+    writef("  {:type \"%s\" :line %d :position %d ", t.type_.sym.quote, t.line_, t.position_);
     if (t.value_.length)
       writef(":value \"%s\" ", quote(t.value_));
     if (t.precedingWhitespace_.length)

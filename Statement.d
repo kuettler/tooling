@@ -9,10 +9,12 @@ import std.stdio : File, write, writeln, stdout, stdin, lines;
 import std.string : strip;
 
 import Tokenizer : tokenize, tk, Token, TokenType;
+import TreeRange : treeRange;
 
 class Entity
 {
 public:
+  size_t position() const { return 0; }
   string precedingWhitespace() const { return ""; }
   string value() const { return ""; }
   string valueString() const { return ""; }
@@ -30,6 +32,7 @@ public:
   }
 
   TokenType type() const { return t.type_; }
+  override size_t position() const { return t.position_; }
   override string precedingWhitespace() const { return t.precedingWhitespace_; }
   override string value() const { return t.value; }
   override string valueString() const { return t.precedingWhitespace_ ~ t.value; }
@@ -56,6 +59,15 @@ public:
     this.entities_ = entities_;
   }
 
+  override size_t position() const {
+    foreach (e; entities_) {
+      if (auto p = e.position)
+      {
+        return p;
+      }
+    }
+    return 0_;
+  }
   override string precedingWhitespace() const { return entities_.front.precedingWhitespace; }
   override string value() const { return "{ ... }"; }
   override string valueString() const {
@@ -171,20 +183,25 @@ unittest
   writeln();
 }
 
+string purgeWhitespace(string s)
+{
+  return s.replace(" ", "");
+}
+
 auto getStatementType(Entity[] entities)
 {
   auto line = entities.map!(e => e.value).joiner(" ").text;
   auto m = line.matchFirst(structRe);
   if (!m.empty)
   {
-    return ["type": m["type"], "name": m["name"]];
+    return ["type": m["type"], "name": m["name"].purgeWhitespace];
   }
 
   m = line.matchFirst(functionRe);
   if (!m.empty)
   {
     return ["type": "function",
-            "name": m["name"],
+            "name": m["name"].purgeWhitespace,
             "virtual" : m["virtual"],
             "inline" : m["inline"],
             "template": m["template"],
@@ -203,12 +220,14 @@ private:
   string type_;
   string name_;
   Entity[] entities_;
+  Statement[] statements_;
 
 public:
   this(string type, string name, Entity[] entities) {
     this.type_ = type;
     this.name_ = name;
     this.entities_ = entities;
+    this.statements_ = entities_.map!(e => e.getStatements).joiner.array;
   }
 
   void print(File f) {
@@ -223,8 +242,18 @@ public:
   string name() { return name_; }
   Entity[] entities() { return entities_; }
 
+  size_t position() const {
+    foreach (e; entities_) {
+      if (auto p = e.position)
+      {
+        return p;
+      }
+    }
+    return 0;
+  }
+
   Statement[] getStatements() {
-    return entities_.map!(e => e.getStatements).joiner.array;
+    return statements_;
   }
 }
 
@@ -322,9 +351,9 @@ override void print(File f) {
     }
 }
 
-  override string name() {
-    return (super.name ~ "(" ~ args_.joiner(", ").text ~ ") " ~ suffix_.joiner(" ").text).strip;
-  }
+  // override string name() {
+  //   return (super.name ~ "(" ~ args_.joiner(", ").text ~ ") " ~ suffix_.joiner(" ").text).strip;
+  // }
 
   string functionName() { return super.name; }
 
@@ -333,6 +362,12 @@ override void print(File f) {
 
   NestedEntity getFunctionBody() { return cast(NestedEntity)entities_[$-1]; }
   bool isDeclaration() { return getFunctionBody() is null; }
+}
+
+auto walk(Statement[] statements)
+{
+  return treeRange!(t => !t.getStatements().empty,
+                    t => t.getStatements())(statements);
 }
 
 Statement createStatement(Entity[] entities, string[string] info)
@@ -349,6 +384,12 @@ Statement createStatement(Entity[] entities, string[string] info)
                                    info["args"].splitter(" , ").array,
                                    info["suffix"].splitter(" ").array,
                                    entities);
+    case "namespace":
+      if (info["name"].empty)
+      {
+        return new Statement(info["type"], "<anonymous>", entities);
+      }
+      return new Statement(info["type"], info["name"], entities);
     default:
       return new Statement(info["type"], info["name"], entities);
   }
