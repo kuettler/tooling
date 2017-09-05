@@ -5,6 +5,7 @@ import std.string;
 
 import Statement : Statement, readStatements, writeStatements, walk;
 
+/*
 void imenu(string infileName, string outfileName)
 {
   auto statements = readStatements(infileName);
@@ -29,9 +30,59 @@ void imenu(string infileName, string outfileName)
 
   writeln(")");
 }
+*/
+
+void display(Statement statement, string prefix)
+{
+  if (statement.type == "function" ||
+      statement.type == "struct" ||
+      statement.type == "class")
+  {
+    if (prefix.empty)
+    {
+      writeln("(\"", statement.name, "\" . ", statement.position + 1, ")");
+    }
+    else
+    {
+      writeln("(\"", prefix, "\" . ", statement.position + 1, ")");
+    }
+  }
+  foreach (stmt; statement.getStatements)
+  {
+    if (statement.type != "namespace")
+    {
+      if (prefix.empty)
+      {
+        display(stmt, stmt.name);
+      }
+      else
+      {
+        display(stmt, prefix ~ "::" ~ stmt.name);
+      }
+    }
+    else
+    {
+      display(stmt, prefix);
+    }
+  }
+}
+
+void imenu(string infileName, string outfileName)
+{
+  auto statements = readStatements(infileName);
+  writeln("(");
+  foreach (stmt; statements)
+  {
+    display(stmt, "");
+  }
+  writeln(")");
+}
 
 int main(string[] args)
 {
+  // import core.memory;
+  // GC.disable;
+
   string name = args[0];
   string infileName;
   string outfileName;

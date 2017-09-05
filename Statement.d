@@ -14,6 +14,7 @@ import TreeRange : treeRange;
 class Entity
 {
 public:
+  TokenType type() const { return tk!""; }
   size_t position() const { return 0; }
   string precedingWhitespace() const { return ""; }
   string value() const { return ""; }
@@ -31,7 +32,7 @@ public:
     this.t = t;
   }
 
-  TokenType type() const { return t.type_; }
+  override TokenType type() const { return t.type_; }
   override size_t position() const { return t.position_; }
   override string precedingWhitespace() const { return t.precedingWhitespace_; }
   override string value() const { return t.value; }
@@ -125,24 +126,24 @@ Entity[] createEntities(Token[] tokens)
   return nestTokens(tokens, start);
 }
 
-auto structRe = regex(r"^(?P<type>namespace|class|struct|enum|union)( (?P<name>\w+))?");
+// auto structRe = regex(r"^(?P<type>namespace|class|struct|enum|union)( (?P<name>\w+))?");
 
-// auto functionRe = regex(r"(template <[^>]+> )?" ~
-//                         r"(?P<return>([a-zA-Z0-9_&<,>* ]+|(::[a-zA-Z0-9_&<,>* ]+))+ )?" ~
-//                         r"(?P<name>(((~ )|(:: ))?[a-zA-Z0-9_]+|( :: ))+)" ~
-//                         r"(o?perator *.[^(]*)?" ~
-//                         r" \( (?P<args>[a-zA-Z0-9_ :&<,>*]*)\)" ~
+// // auto functionRe = regex(r"(template <[^>]+> )?" ~
+// //                         r"(?P<return>([a-zA-Z0-9_&<,>* ]+|(::[a-zA-Z0-9_&<,>* ]+))+ )?" ~
+// //                         r"(?P<name>(((~ )|(:: ))?[a-zA-Z0-9_]+|( :: ))+)" ~
+// //                         r"(o?perator *.[^(]*)?" ~
+// //                         r" \( (?P<args>[a-zA-Z0-9_ :&<,>*]*)\)" ~
+// //                         r"(?P<suffix> [a-zA-Z]+)*"
+// //   );
+
+// auto functionRe = regex(r"(?P<template>template <[^>]+> )?" ~
+//                         r"(?P<virtual>virtual )?" ~
+//                         r"(?P<inline>inline )?" ~
+//                         r"(?P<return>[:a-zA-Z0-9_&<,>* ]*[a-zA-Z0-9_&>*] )?" ~
+//                         r"(?P<name>[~a-zA-Z_][:a-zA-Z0-9_ ]*.[^(]*)" ~
+//                         r" \( (?P<args>[a-zA-Z0-9_ :&<,>*.]*)\)" ~
 //                         r"(?P<suffix> [a-zA-Z]+)*"
 //   );
-
-auto functionRe = regex(r"(?P<template>template <[^>]+> )?" ~
-                        r"(?P<virtual>virtual )?" ~
-                        r"(?P<inline>inline )?" ~
-                        r"(?P<return>[:a-zA-Z0-9_&<,>* ]*[a-zA-Z0-9_&>*] )?" ~
-                        r"(?P<name>[~a-zA-Z_][:a-zA-Z0-9_ ]*.[^(]*)" ~
-                        r" \( (?P<args>[a-zA-Z0-9_ :&<,>*.]*)\)" ~
-                        r"(?P<suffix> [a-zA-Z]+)*"
-  );
 
 unittest
 {
@@ -190,27 +191,85 @@ string purgeWhitespace(string s)
 
 auto getStatementType(Entity[] entities)
 {
-  auto line = entities.map!(e => e.value).joiner(" ").text;
-  auto m = line.matchFirst(structRe);
-  if (!m.empty)
+  // auto line = entities.map!(e => e.value).joiner(" ").text;
+  // auto m = line.matchFirst(structRe);
+  // if (!m.empty)
+  // {
+  //   return ["type": m["type"], "name": m["name"].purgeWhitespace];
+  // }
+
+  // m = line.matchFirst(functionRe);
+  // if (!m.empty)
+  // {
+  //   return ["type": "function",
+  //           "name": m["name"].purgeWhitespace,
+  //           "virtual" : m["virtual"],
+  //           "inline" : m["inline"],
+  //           "template": m["template"],
+  //           "return": m["return"].strip,
+  //           "args": m["args"].strip,
+  //           "suffix": m["suffix"].strip,
+  //     ];
+  // }
+
+  if (entities.length > 2 && entities.front.type == tk!"template" && entities[1].type == tk!"<")
   {
-    return ["type": m["type"], "name": m["name"].purgeWhitespace];
+    auto c = 1;
+    entities = entities[2 .. $];
+    while (!entities.empty && c > 0)
+    {
+      auto t = entities.front.type;
+      if (t == tk!"<") { c += 1; }
+      else if (t == tk!">") { c -= 1; }
+      else if (t == tk!">>") { c -= 2; }
+
+      entities = entities[1 .. $];
+    }
   }
 
-  m = line.matchFirst(functionRe);
-  if (!m.empty)
+  if (entities.length >= 2)
   {
-    return ["type": "function",
-            "name": m["name"].purgeWhitespace,
-            "virtual" : m["virtual"],
-            "inline" : m["inline"],
-            "template": m["template"],
-            "return": m["return"].strip,
-            "args": m["args"].strip,
-            "suffix": m["suffix"].strip,
-      ];
+    auto t = entities.front.type;
+    if (t == tk!"namespace" || t == tk!"class" || t == tk!"struct" || t == tk!"enum" || t == tk!"union")
+    {
+      if (entities[1].type == tk!"identifier")
+      {
+        return ["type": entities[0].value, "name": entities[1].value];
+      }
+    }
+    if (t == tk!"auto" && entities[1].type == tk!"identifier")
+    {
+      auto name = entities[1].value;
+      auto e = entities[2 .. $];
+      while (!e.empty)
+      {
+        t = e.front.type;
+        if (t == tk!"::" && e.length > 1 && e[1].type == tk!"identifier")
+        {
+          name = name ~ "::" ~ e[1].value;
+          e = e[2 .. $];
+        }
+        else
+        {
+          break;
+        }
+      }
+      t = e.front.type;
+      if (t == tk!"(")
+      {
+        // FIXME: Incomplete. A proper parser is needed.
+        return ["type": "function",
+                "name": name,
+                "virtual" : "",
+                "inline" : "",
+                "template": "",
+                "return": "",
+                "args": "",
+                "suffix": "",
+          ];
+      }
+    }
   }
-
   return ["type": "code", "name": ""];
 }
 
