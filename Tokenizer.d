@@ -73,6 +73,7 @@ struct TokenizerGenerator(alias tokens, alias reservedTokens) {
     string precedingWhitespace_;
     size_t line_;
     string file_;
+    size_t position_;
 
     string value() const {
       return value_ ? value_ : type_.sym;
@@ -151,7 +152,7 @@ struct TokenizerGenerator(alias tokens, alias reservedTokens) {
     return result;
   }
 
-//pragma(msg, generateCases([NonAlphaTokens, Keywords]));
+  //pragma(msg, generateCases([NonAlphaTokens, Keywords]));
 
   static Tuple!(size_t, size_t, TokenType2)
   match(R)(R r) {
@@ -250,11 +251,17 @@ CppLexer.Token[] tokenize(string input, string initialFilename = null) {
   CppLexer.Token[] output;
   auto file = initialFilename;
   size_t line = 1;
+  auto original = input;
 
   for (;;) {
-    auto t = nextToken(input, line);
+    auto t = nextToken(input, line, original);
     t.file_ = initialFilename;
     //writeln(t);
+    // auto p = t.value_.ptr - original.ptr;
+    // if (p >= 0 && p < original.length)
+    // {
+    //   t.position_ = p;
+    // }
     output ~= t;
     if (t.type_ is CppLexer.tk!"\0") break;
   }
@@ -278,7 +285,7 @@ unittest
 /**
  * Helper function, gets next token and updates pc and line.
  */
-CppLexer.Token nextToken(ref string pc, ref size_t line) {
+CppLexer.Token nextToken(ref string pc, ref size_t line, string original) {
   size_t charsBefore;
   string value;
   CppLexer.TokenType2 tt;
@@ -404,8 +411,8 @@ CppLexer.Token nextToken(ref string pc, ref size_t line) {
     auto lskip = std.algorithm.count(initialPc[0 .. delta], '\n');
     if (initialLine + lskip != line) {
       stderr.writeln("Flint tokenization error: muched '",
-          initialPc[0 .. delta], "' (token type '", tt.sym(), "'), "
-          "which contains ", lskip, " newlines, "
+          initialPc[0 .. delta], "' (token type '", tt.sym(), "'), " ~
+          "which contains ", lskip, " newlines, " ~
           "but line has been incremented by ", line - initialLine);
       throw new Exception("Internal flint error");
     }
@@ -414,7 +421,8 @@ CppLexer.Token nextToken(ref string pc, ref size_t line) {
   return CppLexer.Token(
     tt, value,
     initialPc[0 .. charsBefore],
-    tokenLine);
+    tokenLine, "",
+    initialPc.ptr - original.ptr);
 }
 
 /**
