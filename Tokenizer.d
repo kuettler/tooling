@@ -257,11 +257,11 @@ CppLexer.Token[] tokenize(string input, string initialFilename = null) {
     auto t = nextToken(input, line, original);
     t.file_ = initialFilename;
     //writeln(t);
-    auto p = t.value_.ptr - original.ptr;
-    if (p >= 0 && p < original.length)
-    {
-      t.position_ = p;
-    }
+    // auto p = t.value_.ptr - original.ptr;
+    // if (p >= 0 && p < original.length)
+    // {
+    //   t.position_ = p;
+    // }
     output ~= t;
     if (t.type_ is CppLexer.tk!"\0") break;
   }

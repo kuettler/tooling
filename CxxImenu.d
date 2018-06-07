@@ -3,78 +3,24 @@ import std.array;
 import std.stdio;
 import std.string;
 
-import Statement : Statement, readStatements, writeStatements, walk;
+import Parser : parseFile, getAllFunctions, getAllMethods;
 
-/*
-void imenu(string infileName, string outfileName)
+void imenu(string infileName)
 {
-  auto statements = readStatements(infileName);
+  parseFile(infileName);
 
   writeln("(");
 
-  foreach (n; statements.walk)
+  foreach (fn; getAllFunctions)
   {
-    auto statement = n.back;
-    auto name = n.filter!(e => e.type != "namespace").map!(e => e.name).joiner("::");
-    switch(statement.type)
-    {
-      case "function":
-      case "struct":
-      case "class":
-        writeln("(\"", name, "\" . ", statement.position + 1, ")");
-      break;
-      default:
-        break;
-    }
+    writeln("(\"", fn.name, "\" . ", fn.def_pos, ")");
   }
 
-  writeln(")");
-}
-*/
+  foreach (fn; getAllMethods)
+  {
+    writeln("(\"", fn.name, "\" . ", fn.def_pos, ")");
+  }
 
-void display(Statement statement, string prefix)
-{
-  if (statement.type == "function" ||
-      statement.type == "struct" ||
-      statement.type == "class")
-  {
-    if (prefix.empty)
-    {
-      writeln("(\"", statement.name, "\" . ", statement.position + 1, ")");
-    }
-    else
-    {
-      writeln("(\"", prefix, "\" . ", statement.position + 1, ")");
-    }
-  }
-  foreach (stmt; statement.getStatements)
-  {
-    if (statement.type != "namespace")
-    {
-      if (prefix.empty)
-      {
-        display(stmt, stmt.name);
-      }
-      else
-      {
-        display(stmt, prefix ~ "::" ~ stmt.name);
-      }
-    }
-    else
-    {
-      display(stmt, prefix);
-    }
-  }
-}
-
-void imenu(string infileName, string outfileName)
-{
-  auto statements = readStatements(infileName);
-  writeln("(");
-  foreach (stmt; statements)
-  {
-    display(stmt, "");
-  }
   writeln(")");
 }
 
@@ -85,34 +31,18 @@ int main(string[] args)
 
   string name = args[0];
   string infileName;
-  string outfileName;
 
   if (args.length == 1)
   {
-    writeln("Usage: ", name, " [-o outfile] inputfile");
+    writeln("Usage: ", name, " inputfile");
     return 1;
   }
 
-  if (args.length > 1)
-  {
-    if (args[1] == "-o" && args.length > 2)
-    {
-      outfileName = args[2];
-      args = args[3 .. $];
-    }
-    else
-    {
-      args = args[1 .. $];
-    }
-  }
+  infileName = args[1];
+  imenu(infileName);
 
-  infileName = args[0];
-  if (infileName != "-" && outfileName.empty)
-  {
-    outfileName = infileName;
-  }
-
-  imenu(infileName, outfileName);
+  //imenu("/home/ukuettler/projects/xcard-base/FinanceService/TransactionFactoryI.cpp");
+  //imenu("/home/ukuettler/projects/xcard-base/MediatorCardLoading/MediatorCardLoadingFunctions.cpp");
 
   return 0;
 }
