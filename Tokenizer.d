@@ -254,7 +254,7 @@ CppLexer.Token[] tokenize(string input, string initialFilename = null) {
   auto original = input;
 
   for (;;) {
-    auto t = nextToken(input, line);
+    auto t = nextToken(input, line, original);
     t.file_ = initialFilename;
     //writeln(t);
     auto p = t.value_.ptr - original.ptr;
@@ -285,7 +285,7 @@ unittest
 /**
  * Helper function, gets next token and updates pc and line.
  */
-CppLexer.Token nextToken(ref string pc, ref size_t line) {
+CppLexer.Token nextToken(ref string pc, ref size_t line, string original) {
   size_t charsBefore;
   string value;
   CppLexer.TokenType2 tt;
@@ -421,7 +421,8 @@ CppLexer.Token nextToken(ref string pc, ref size_t line) {
   return CppLexer.Token(
     tt, value,
     initialPc[0 .. charsBefore],
-    tokenLine);
+    tokenLine, "",
+    initialPc.ptr - original.ptr);
 }
 
 /**

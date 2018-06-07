@@ -114,7 +114,5 @@ int main(string[] args)
 
   imenu(infileName, outfileName);
 
-  //imenu("/home/ukuettler/projects/xcard-base/FinanceService/TransactionFactoryI.cpp", "-");
-
   return 0;
 }
